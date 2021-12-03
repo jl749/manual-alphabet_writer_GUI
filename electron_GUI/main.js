@@ -2,6 +2,16 @@ const electron = require('electron');
 const url = require('url');
 const path = require('path');
 
+const tf = require('@tensorflow/tfjs');
+const tfn = require('@tensorflow/tfjs-node');  // '@tensorflow/tfjs-node-gpu' if running with GPU.
+var model;
+
+async function loadModel(){
+    const handler = tfn.io.fileSystem('./public/jsModel/model.json');
+    return await tf.loadLayersModel(handler);
+}
+loadModel().then(loaded_model => model = loaded_model).then(console.log('==model loaded=='));
+
 const {app, BrowserWindow, Menu, ipcMain} = electron;
 let mainWindow;
 let addWindow;
@@ -59,6 +69,24 @@ function createAddWindow() {
     });
 }
 
+// catch toMain (landmark infos)
+ipcMain.on('toMain', (e, item) => {
+    console.log(item);
+
+    // let input = tf.tensor(arr, [1, 224, 224, 4]);  // reshape
+    // input = input.slice([0, 0, 0, 0], [1, 224, 224, 3]);  // 4 channel -> 3 channel
+
+    // const preds = model.predict(input);
+    // // console.log(preds.dataSync());  // tf.print(preds);
+    // let index = preds.argMax(1).dataSync()[0];
+    // let new_command = CLASSES[index];
+    // // command ... new_command
+    // let prob = preds.dataSync()[index];
+
+    // if(prob > 0.7){
+    //     console.log(new_command, prob);
+    // }
+});
 // catch item:add
 ipcMain.on('item:add', (e, item) => {
     mainWindow.webContents.send('item:add', item);  // hand it over to mainWindow

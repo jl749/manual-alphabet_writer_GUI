@@ -16,10 +16,10 @@
 
     <script type="module" src="pose.mjs"></script>
     <script>
+        // 분류 레이블
         window.api.receive("fromMain", (data) => {
             console.log(`Received ${data} from main process`);
         });
-        window.api.send("toMain", "some data");
     </script>
 
 </body>
