@@ -7,7 +7,7 @@ const tfn = require('@tensorflow/tfjs-node');  // '@tensorflow/tfjs-node-gpu' if
 var model;
 
 async function loadModel(){
-    const handler = tfn.io.fileSystem('./public/jsModel/model.json');
+    const handler = tfn.io.fileSystem('./jsModel/model.json');
     return await tf.loadLayersModel(handler);
 }
 loadModel().then(loaded_model => model = loaded_model).then(console.log('==model loaded=='));
