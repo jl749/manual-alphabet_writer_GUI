@@ -44,6 +44,7 @@ function onResults(results) {
         }
 
         console.log(results.multiHandLandmarks[0]);
+        // landmark list to backend
         window.api.send("toMain", normaliseCor(results.multiHandLandmarks[0]));
     }
     canvasCtx.restore();
