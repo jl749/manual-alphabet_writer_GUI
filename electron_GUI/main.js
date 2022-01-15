@@ -16,7 +16,6 @@ loadModel('./jsModel/point_history_classifier/point_history_classifier.json').th
 
 const {app, BrowserWindow, Menu, ipcMain} = electron;
 let mainWindow;
-let addWindow;
 
 process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true';
 
@@ -43,33 +42,6 @@ app.on('ready', () => {
     const mainMenu = Menu.buildFromTemplate(mainMenuTemplate);
     Menu.setApplicationMenu(mainMenu);
 });
-
-// handle create add window
-function createAddWindow() {
-    addWindow = new BrowserWindow({
-        width: 300,
-        height: 200,
-        title: 'Add Shopping List Item',
-        webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false
-        },
-        /**
-         * nodeIntegration: true is a security risk 
-         * only when you're executing some untrusted remote code on your application. 
-         * For example, suppose your application opens up a third party webpage. 
-         * That would be a security risk because the third party webpage will have access to node runtime 
-         * and can run some malicious code on your user's filesystem
-         */
-    });
-
-    addWindow.loadFile(path.join(__dirname, 'addWindow.html'));
-
-    // garbage collection handle
-    addWindow.on('close', () => {
-        addWindow = null;
-    });
-}
 
 
 var batch = new Array(570);
@@ -105,11 +77,6 @@ ipcMain.on('toMain', (e, item) => {
     // if(prob > 0.7){
     //     console.log(new_command, prob);
     // }
-});
-// catch item:add
-ipcMain.on('item:add', (e, item) => {
-    mainWindow.webContents.send('item:add', item);  // hand it over to mainWindow
-    addWindow.close();  // after addWindow emit this event close it
 });
 
 // create menu template
