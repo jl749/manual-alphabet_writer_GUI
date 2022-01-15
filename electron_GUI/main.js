@@ -5,12 +5,14 @@ const path = require('path');
 const tf = require('@tensorflow/tfjs');
 const tfn = require('@tensorflow/tfjs-node');  // '@tensorflow/tfjs-node-gpu' if running with GPU.
 var model;
+var check_moving_model;
 
-async function loadModel(){
-    const handler = tfn.io.fileSystem('./jsModel/model.json');
+async function loadModel(model_path){
+    const handler = tfn.io.fileSystem(model_path);
     return await tf.loadLayersModel(handler);
 }
-loadModel().then(loaded_model => model = loaded_model).then(console.log('==model loaded=='));
+loadModel('./jsModel/model.json').then(loaded_model => model = loaded_model).then(console.log('==model loaded=='));
+loadModel('./jsModel/point_history_classifier/point_history_classifier.json').then(loaded_model => check_moving_model = loaded_model).then(console.log('==check_moving_model loaded=='));
 
 const {app, BrowserWindow, Menu, ipcMain} = electron;
 let mainWindow;
@@ -76,22 +78,19 @@ var index = 0;
 ipcMain.on('toMain', (e, item) => {
     // console.log(item);  // 0,0 normalised landmarks
     // model.summary();
-
-    // result of number
-    console.log(item);
-    // for(let i=0 ; i<21 ; i++) {  // 21 landmarks fixed (just in case some are hidden)
-    //     batch[index++] = item[i].x;
-    //     batch[index++] = item[i].y;
-    // }
+    for(let i=0 ; i<57 ; i++) {  // 21 landmarks fixed (just in case some are hidden)
+        batch[index++] = item[i];
+        // batch[index++] = item[i].y;
+    }
 
     // for(let i=0 ; i<15 ; i++)  // angle tmp padding
     //     batch[index++] = 0;
-    // if(index > 569) index = 0;
+    if(index > 569) index = 0;
     
-    // let input = tf.tensor(batch, [1, 10, 57]);
+    let input = tf.tensor(batch, [1, 10, 57]);
     // console.log(input.dataSync());
-    // const preds = model.predict(input);
-    // tf.print(preds);
+    const preds = model.predict(input);
+    tf.print(preds);
 
     // let input = tf.tensor(arr, [1, 224, 224, 4]);  // reshape
     // input = input.slice([0, 0, 0, 0], [1, 224, 224, 3]);  // 4 channel -> 3 channel

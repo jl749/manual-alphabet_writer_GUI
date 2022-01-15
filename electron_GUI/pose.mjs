@@ -50,11 +50,111 @@ Math.degrees = function(radians) {
 	return radians * 180 / Math.PI;
 }
 
+function wrist_angle_calculator(hand_lmlist) {
+    let radian = Math.atan2(hand_lmlist[17][2]-hand_lmlist[0][2],hand_lmlist[17][1]-hand_lmlist[0][1])-Math.atan2(hand_lmlist[5][2]-hand_lmlist[0][2],hand_lmlist[5][1]-hand_lmlist[0][1])
+    let wrist_angle = 360 - parseInt(Math.degrees(radian))
+    if (wrist_angle < 0){
+        wrist_angle += 360;
+    }
+    return wrist_angle
+}
+
+function similar_text_res_calculator(hand_lmlist){
+    let radian_1 = Math.atan2(hand_lmlist[9][2]-hand_lmlist[12][2],hand_lmlist[9][1]-hand_lmlist[12][1])
+    let wrist_angle_1 = parseInt(Math.degrees(radian_1))
+    if (wrist_angle_1 < 0){
+        wrist_angle_1 += 360;
+    }
+    let radian_2 = Math.atan2(hand_lmlist[13][2]-hand_lmlist[16][2],hand_lmlist[13][1]-hand_lmlist[16][1])
+    let wrist_angle_2 = parseInt(Math.degrees(radian_2))
+    if (wrist_angle_2 < 0){
+        wrist_angle_2 += 360;
+    }
+    let similar_text_res = wrist_angle_2 - wrist_angle_1
+    return similar_text_res
+}
+
+function min_max_scale(array) {
+    let scaled_array = [];
+    if (Math.max.apply(null, array) == Math.min.apply(null, array)){
+        scaled_array = array;
+    } else {
+        for (let i = 0; i < 21; i++){
+            let temp = array[i] / (Math.max.apply(null, array)-Math.min.apply(null, array));
+            scaled_array.push(temp);
+        }
+    }
+    return scaled_array;
+}
+
+function generate_vertor(joint, select_array){
+    let vector = Array.from(new Array(20), _ => Array(2).fill(0));
+    for (let i=0; i<20; i++){
+        vector[i][0] = joint[select_array[i]][0];
+        vector[i][1] = joint[select_array[i]][1];
+    }
+    return vector;
+}
+
+function differ_vector(vector1, vector2){
+    let diff = Array.from(new Array(20), _ => Array(2).fill(0));
+    for (let i=0; i<20; i++){
+        diff[i][0] = vector1[i][0]-vector2[i][0];
+        diff[i][1] = vector1[i][1]-vector2[i][1];
+    }
+    return diff
+}
+
+function frobenius_norm_vector(vector){
+    let fro_norm = Array.from(new Array(20), _ => Array(1).fill(0));
+    for (let i=0; i<20; i++){
+        fro_norm[i][0] = Math.sqrt(vector[i][0]**2 + vector[i][1]**2);
+    }
+    return fro_norm;
+}
+
+function vector_normalization(vector, norm){
+    let vector_norm = Array.from(new Array(20), _ => Array(2).fill(0));
+    for (let i=0; i<20; i++){
+        vector_norm[i][0] = vector[i][0] / norm[i][0];
+        vector_norm[i][1] = vector[i][1] / norm[i][0];
+    }
+    return vector_norm;
+}
+
+function multiply_matrix(vector, select_array_1, select_array_2){
+    let multipled_vector = Array.from(new Array(15), _ => Array(1).fill(0));
+    for (let i=0; i<15; i++){
+        multipled_vector[i][0] = (vector[select_array_1[i]][0] * vector[select_array_2[i]][0]) + (vector[select_array_1[i]][1] * vector[select_array_2[i]][1]);
+    }
+    return multipled_vector;
+}
+
+function get_angle(vector){
+    let angle = [];
+    for (let i=0; i<15; i++){
+    angle.push(Math.degrees(Math.acos(vector[i])));
+    }
+    return angle;
+}
+
+// check moving function
+function calc_landmark_list(landmarks){
+    let image_width = 500;
+    let landmark_point = [];
+
+    for(let i=0; i<21; i++){
+        let landmark_x = Math.min(parseInt(landmarks[i].x * image_width), image_width-1)
+        landmark_point.push([landmark_x/1.5, 0])
+    }
+    return landmark_point
+}
+
 let cnt10 = 0;
 let dcnt = 0;
 let text_cnt = 0;
 let flag = false; 
-let mode = false;
+let mode = true;
 
 function onResults(results) {
     canvasCtx.save(); 
@@ -94,7 +194,42 @@ function onResults(results) {
             
             // Korean
             if (mode == true){
-                // pass
+                let wrist_angle = wrist_angle_calculator(hand_lmlist)
+                let similar_text_res = similar_text_res_calculator(hand_lmlist)
+                // console.log(wrist_angle, similar_text_res)
+
+                let joint = Array.from(new Array(21), _ => Array(2).fill(0));
+                let x_right_label = [];
+                let y_right_label = [];
+
+                for (let i = 0; i < 21; i++){
+                    joint[i][0] = results.multiHandLandmarks[0][i].x;
+                    joint[i][1] = results.multiHandLandmarks[0][i].y;
+                }
+                for (let i = 0; i < 21; i++){
+                    x_right_label.push(joint[i][0] - joint[0][0]);
+                    y_right_label.push(joint[i][1] - joint[0][1]);
+                }
+                let x_right_scale = min_max_scale(x_right_label);
+                let y_right_scale = min_max_scale(y_right_label);
+                let full_scale = x_right_scale.concat(y_right_scale);
+
+                // let v1 = joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19], :];
+                // let v2 = joint[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], :3];
+                let v1 = generate_vertor(joint, [0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19])
+                let v2 = generate_vertor(joint, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
+                
+                let v = differ_vector(v2, v1);
+                let v_fro_norm = frobenius_norm_vector(v);
+                let v_norm = vector_normalization(v, v_fro_norm);
+                let v_multiple = multiply_matrix(v_norm, [0,1,2,4,5,6,8,9,10,12,13,14,16,17,18], [1,2,3,5,6,7,9,10,11,13,14,15,17,18,19])
+                let angle = get_angle(v_multiple);
+                let d = full_scale.concat(angle);
+                
+                window.api.send("toMain", d);
+
+                let landmark_list = calc_landmark_list(results.multiHandLandmarks[0])
+                // console.log(landmark_list);
 
             } else { // Number 
                 let action;
@@ -299,9 +434,9 @@ function onResults(results) {
                             flag = false;
                         }
                     }
-                    console.log(action);
+                    // console.log(action);
                     // landmark list to backend
-                    window.api.send("toMain", action);
+                    // window.api.send("toMain", action);
                 }
             }
         }
