@@ -76,19 +76,22 @@ var index = 0;
 ipcMain.on('toMain', (e, item) => {
     // console.log(item);  // 0,0 normalised landmarks
     // model.summary();
-    for(let i=0 ; i<21 ; i++) {  // 21 landmarks fixed (just in case some are hidden)
-        batch[index++] = item[i].x;
-        batch[index++] = item[i].y;
-    }
 
-    for(let i=0 ; i<15 ; i++)  // angle tmp padding
-        batch[index++] = 0;
-    if(index > 569) index = 0;
+    // result of number
+    console.log(item);
+    // for(let i=0 ; i<21 ; i++) {  // 21 landmarks fixed (just in case some are hidden)
+    //     batch[index++] = item[i].x;
+    //     batch[index++] = item[i].y;
+    // }
+
+    // for(let i=0 ; i<15 ; i++)  // angle tmp padding
+    //     batch[index++] = 0;
+    // if(index > 569) index = 0;
     
-    let input = tf.tensor(batch, [1, 10, 57]);
-    console.log(input.dataSync());
-    const preds = model.predict(input);
-    tf.print(preds);
+    // let input = tf.tensor(batch, [1, 10, 57]);
+    // console.log(input.dataSync());
+    // const preds = model.predict(input);
+    // tf.print(preds);
 
     // let input = tf.tensor(arr, [1, 224, 224, 4]);  // reshape
     // input = input.slice([0, 0, 0, 0], [1, 224, 224, 3]);  // 4 channel -> 3 channel
