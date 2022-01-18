@@ -20,6 +20,11 @@ export var calAngleForHandLandmark = (land1, land2, land3) => {
     return degree;
 };
 
+export var calAngleForHand = (land1, land2) => {
+    let degree = _calDegree(Math.atan2(land1[2] - land2[2],land1[1] - land2[1]));
+    return degree;
+};
+
 export var normaliseCor = (input) => {
     let shift_byX = (input[0]['x'] > 0)? -input[0]['x'] : input[0]['x'];
     let shift_byY = (input[0]['y'] > 0)? -input[0]['y'] : input[0]['y'];

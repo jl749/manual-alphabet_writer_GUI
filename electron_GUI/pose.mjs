@@ -46,9 +46,6 @@ function onResults(results) {
 
             // Korean
             if (utils.mode == true){
-                let wrist_angle = utils.wrist_angle_calculator(hand_lmlist)
-                let similar_text_res = utils.similar_text_res_calculator(hand_lmlist)
-                // console.log(wrist_angle, similar_text_res)
                 let joint = Array.from(new Array(21), _ => Array(2).fill(0));
                 let x_right_label = [];
                 let y_right_label = [];
@@ -73,7 +70,7 @@ function onResults(results) {
                 let angle = utils.get_angle(v_multiple);
                 let d = full_scale.concat(angle);
                 
-                // window.api.send("toMain", d);
+                window.api.send("toMain", [hand_lmlist, d]);
 
                 // to check moving
                 let landmark_list = utils.calc_landmark_list(results.multiHandLandmarks[0]);
@@ -85,7 +82,7 @@ function onResults(results) {
                     utils.point_history.push(landmark_list[5]);
                 }
                 if (pre_process_point_history_list.length == (history_length *2)){
-                    window.api.send("toMain", pre_process_point_history_list);
+                    // window.api.send("toMain", pre_process_point_history_list);
                 }
                 // console.log(pre_process_point_history_list);
 
