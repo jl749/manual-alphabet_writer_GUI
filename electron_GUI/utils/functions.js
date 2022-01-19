@@ -20,6 +20,11 @@ export var calAngleForHandLandmark = (land1, land2, land3) => {
     return degree;
 };
 
+export var calAngleForHand = (land1, land2) => {
+    let degree = _calDegree(Math.atan2(land1[2] - land2[2],land1[1] - land2[1]));
+    return degree;
+};
+
 export var normaliseCor = (input) => {
     let shift_byX = (input[0]['x'] > 0)? -input[0]['x'] : input[0]['x'];
     let shift_byY = (input[0]['y'] > 0)? -input[0]['y'] : input[0]['y'];
@@ -133,7 +138,6 @@ export function get_angle(vector){
 export function calc_landmark_list(landmarks){
     let image_width = 500;
     let landmark_point = [];
-
     for(let i=0; i<21; i++){
         let landmark_x = Math.min(parseInt(landmarks[i].x * image_width), image_width-1)
         landmark_point.push([landmark_x/1.5, 0])
@@ -141,8 +145,59 @@ export function calc_landmark_list(landmarks){
     return landmark_point
 }
 
+export function deepCopy(obj) {
+    if(typeof obj !== 'object' || obj === null) {
+        return obj;
+    }
+    if(obj instanceof Date) {
+        return new Date(obj.getTime());
+    }
+    if(obj instanceof Array) {
+        return obj.reduce((arr, item, i) => {
+            arr[i] = deepCopy(item);
+            return arr;
+        }, []);
+    }
+    if(obj instanceof Object) {
+        return Object.keys(obj).reduce((newObj, key) => {
+            newObj[key] = deepCopy(obj[key]);
+            return newObj;
+        }, {})
+    }
+}
+
+export function chian_from_iterable(array){
+    let linear_array = [];
+    for (const value of array) {
+        linear_array.push(value[0]);
+        linear_array.push(value[1]);
+    }
+    return linear_array
+}
+
+export function pre_process_point_history(point_history) {
+    let image_width = 500;
+    let image_height = 500;
+    let temp_point_history = deepCopy(point_history);
+    let base_x = 0;
+    let base_y = 0;
+    let index = 0;
+    for (const point of temp_point_history) {
+        if (index == 0){
+            base_x = point[0];
+            base_y = point[1];
+        }
+        temp_point_history[index][0] = (temp_point_history[index][0] - base_x) / image_width;
+        temp_point_history[index][1] = (temp_point_history[index][1] - base_y) / image_height;
+        index++;
+    }
+    temp_point_history = chian_from_iterable(temp_point_history);
+    return temp_point_history
+}
+
 export let cnt10 = 0;
 export let dcnt = 0;
 export let text_cnt = 0;
 export let flag = false; 
 export let mode = true;
+export let point_history = [];

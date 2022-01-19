@@ -40,12 +40,12 @@ function onResults(results) {
             let max_detec = 30;            
             let num_lst = [11, 15, 16];
             
+            let status = '';
+            let history_length = 16;
+            let finger_gesture_id = 0;
+
             // Korean
             if (utils.mode == true){
-                let wrist_angle = utils.wrist_angle_calculator(hand_lmlist)
-                let similar_text_res = utils.similar_text_res_calculator(hand_lmlist)
-                // console.log(wrist_angle, similar_text_res)
-
                 let joint = Array.from(new Array(21), _ => Array(2).fill(0));
                 let x_right_label = [];
                 let y_right_label = [];
@@ -61,12 +61,8 @@ function onResults(results) {
                 let x_right_scale = utils.min_max_scale(x_right_label);
                 let y_right_scale = utils.min_max_scale(y_right_label);
                 let full_scale = x_right_scale.concat(y_right_scale);
-
-                // let v1 = joint[[0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19], :];
-                // let v2 = joint[[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20], :3];
                 let v1 = utils.generate_vertor(joint, [0,1,2,3,0,5,6,7,0,9,10,11,0,13,14,15,0,17,18,19])
                 let v2 = utils.generate_vertor(joint, [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20])
-                
                 let v = utils.differ_vector(v2, v1);
                 let v_fro_norm = utils.frobenius_norm_vector(v);
                 let v_norm = utils.vector_normalization(v, v_fro_norm);
@@ -74,10 +70,21 @@ function onResults(results) {
                 let angle = utils.get_angle(v_multiple);
                 let d = full_scale.concat(angle);
                 
-                window.api.send("toMain", d);
+                window.api.send("toMain", [hand_lmlist, d]);
 
-                let landmark_list = utils.calc_landmark_list(results.multiHandLandmarks[0])
-                // console.log(landmark_list);
+                // to check moving
+                let landmark_list = utils.calc_landmark_list(results.multiHandLandmarks[0]);
+                let pre_process_point_history_list = utils.pre_process_point_history(utils.point_history);
+                if (utils.point_history.length < history_length){
+                    utils.point_history.push(landmark_list[5]);
+                } else {
+                    utils.point_history.shift();
+                    utils.point_history.push(landmark_list[5]);
+                }
+                if (pre_process_point_history_list.length == (history_length *2)){
+                    // window.api.send("toMain", pre_process_point_history_list);
+                }
+                // console.log(pre_process_point_history_list);
 
             } else { // Number 
                 let action;
