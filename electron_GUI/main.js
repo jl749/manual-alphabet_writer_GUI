@@ -16,8 +16,41 @@ function _calDegree(degree){
 
 var calAngleForHand = (land1, land2) => {
     let degree = _calDegree(Math.atan2(land1[2] - land2[2],land1[1] - land2[1]));
-    return degree;
+    return parseInt(degree);
 };
+
+var calAngleForHandLandmark = (land1, land2, land3) => {
+    let degree = _calDegree(Math.atan2(land3[2] - land2[2],land3[1]-land2[1]) - Math.atan2(land1[2] - land2[2],land1[1] - land2[1]));
+    return parseInt(degree);
+};
+
+Math.degrees = function(radians) {
+	return radians * 180 / Math.PI;
+}
+
+function wrist_angle_calculator(hand_lmlist) {
+    let radian = Math.atan2(hand_lmlist[17][2]-hand_lmlist[0][2],hand_lmlist[17][1]-hand_lmlist[0][1])-Math.atan2(hand_lmlist[5][2]-hand_lmlist[0][2],hand_lmlist[5][1]-hand_lmlist[0][1])
+    let wrist_angle = 360 - parseInt(Math.degrees(radian));
+    if (wrist_angle < 0){
+        wrist_angle += 360;
+    }
+    return wrist_angle
+}
+
+function similar_text_res_calculator(hand_lmlist){
+    let radian_1 = Math.atan2(hand_lmlist[9][2]-hand_lmlist[12][2],hand_lmlist[9][1]-hand_lmlist[12][1])
+    let wrist_angle_1 = parseInt(Math.degrees(radian_1))
+    if (wrist_angle_1 < 0){
+        wrist_angle_1 += 360;
+    }
+    let radian_2 = Math.atan2(hand_lmlist[13][2]-hand_lmlist[16][2],hand_lmlist[13][1]-hand_lmlist[16][1])
+    let wrist_angle_2 = parseInt(Math.degrees(radian_2))
+    if (wrist_angle_2 < 0){
+        wrist_angle_2 += 360;
+    }
+    let similar_text_res = wrist_angle_2 - wrist_angle_1
+    return similar_text_res
+}
 
 var model;
 var model1;
@@ -78,9 +111,12 @@ ipcMain.on('toMain', (e, item) => {
     let hand_lmlist = item[0];
     let d = item[1];
     let hand_angle = calAngleForHand(hand_lmlist[0], hand_lmlist[9]);
+    let action = '';
+    let select_model = '';
+    let thumb_index_angle = calAngleForHandLandmark(hand_lmlist[4], hand_lmlist[2], hand_lmlist[5]);
     
-    // let wrist_angle = utils.wrist_angle_calculator(hand_lmlist);
-    // let similar_text_res = utils.similar_text_res_calculator(hand_lmlist);
+    let wrist_angle = wrist_angle_calculator(hand_lmlist);
+    let similar_text_res = similar_text_res_calculator(hand_lmlist);
 
     for(let i=0 ; i<57 ; i++) {  // 21 landmarks fixed (just in case some are hidden)
         batch[index++] = d[i];
@@ -89,21 +125,62 @@ ipcMain.on('toMain', (e, item) => {
     let input = tf.tensor(batch, [1, 5, 57]);
 
     if (hand_lmlist[5][1] > hand_lmlist[17][1] && hand_lmlist[5][2] < hand_lmlist[0][2] && hand_lmlist[17][2] < hand_lmlist[0][2] && hand_angle < 300) {
-        const preds = model1.predict(input).argMax(-1);
-        preds.array().then(array => console.log(actions_m1[array[0]]));
-
-    } else if (hand_lmlist[5][1] < hand_lmlist[17][1] && hand_lmlist[5][2] < hand_lmlist[0][2] && hand_lmlist[17][2] < hand_lmlist[0][2] && hand_angle < 300) {
-        const preds = model2.predict(input).argMax(-1);
-        preds.array().then(array => console.log(actions_m2[array[0]]));
-
-    } else if (hand_lmlist[5][1] > hand_lmlist[17][1] && hand_lmlist[0][2] < hand_lmlist[5][2] && hand_lmlist[0][2] < hand_lmlist[17][2]) {
-        const preds = model3.predict(input).argMax(-1);
-        preds.array().then(array => console.log(actions_m3[array[0]]));
-
+        select_model = 'm1';
+        const preds = model1.predict(input);
+        const i_pred = preds.argMax(-1).arraySync()[0];
+        const conf = preds.arraySync()[0][i_pred];
+        if (conf > 0.9){ 
+            action = actions_m1[i_pred];
+            if (action == 'ㅑ'){
+                if (hand_lmlist[8][2] > hand_lmlist[7][2] || hand_lmlist[12][2] > hand_lmlist[11][2]) { action = 'ㅁ'; }
+            }
+        } else {action = '';}
+    } 
+    else if (hand_lmlist[5][1] < hand_lmlist[17][1] && hand_lmlist[5][2] < hand_lmlist[0][2] && hand_lmlist[17][2] < hand_lmlist[0][2] && hand_angle < 300) {
+        select_model = 'm2';
+        const preds = model2.predict(input);
+        const i_pred = preds.argMax(-1).arraySync()[0];
+        const conf = preds.arraySync()[0][i_pred];
+        if (conf > 0.9){ 
+            action = actions_m2[i_pred];
+        } else {action = '';}
+    } 
+    else if (hand_lmlist[5][1] > hand_lmlist[17][1] && hand_lmlist[0][2] < hand_lmlist[5][2] && hand_lmlist[0][2] < hand_lmlist[17][2]) {
+        select_model = 'm3';
+        const preds = model3.predict(input);
+        const i_pred = preds.argMax(-1).arraySync()[0];
+        const conf = preds.arraySync()[0][i_pred];
+        if (conf > 0.9){ 
+            action = actions_m3[i_pred];
+            if (action == 'ㄱ'){
+                if (thumb_index_angle > 250){ action = 'ㅜ'; }    
+            }else if (action == 'ㅜ'){
+                if (35 < thumb_index_angle < 90){ action = 'ㄱ'; }
+            }
+        } else {action = '';}
+        
     } else {
-        const preds = model4.predict(input).argMax(-1);
-        preds.array().then(array => console.log(actions_m4[array[0]]));
+        select_model = 'm4';
+        const preds = model4.predict(input);
+        const i_pred = preds.argMax(-1).arraySync()[0];
+        const conf = preds.arraySync()[0][i_pred];
+        if (conf > 0.9){ 
+            action = actions_m4[i_pred];
+            if (action == 'ㄹ'){
+                if (similar_text_res < 0){ action = 'ㅌ'; }
+                else if (0 < similar_text_res < 20){ action = 'ㄹ'; }
+            }
+            if (action == 'ㅓ'){
+                if (wrist_angle > 300){ action = 'ㅡ'; }
+            }
+            if (action == 'ㅕ'){
+                if (wrist_angle > 300){ action = 'ㄷ'; }            
+            }
+        } else {action = '';}
+        
     }
+    
+    if (action != '') {console.log(action);}
     
     // const preds = check_moving_model.predict(input).argMax(-1);
     // preds.array().then(array => console.log(check_moving_action[array[0]]));
