@@ -34,7 +34,7 @@ function wrist_angle_calculator(hand_lmlist) {
     if (wrist_angle < 0){
         wrist_angle += 360;
     }
-    return wrist_angle
+    return wrist_angle;
 }
 
 function similar_text_res_calculator(hand_lmlist){
@@ -48,9 +48,32 @@ function similar_text_res_calculator(hand_lmlist){
     if (wrist_angle_2 < 0){
         wrist_angle_2 += 360;
     }
-    let similar_text_res = wrist_angle_2 - wrist_angle_1
-    return similar_text_res
+    let similar_text_res = wrist_angle_2 - wrist_angle_1;
+    return similar_text_res;
 }
+
+function deque_push(deque, push_value, capacity) {
+    if (deque.length < capacity) {
+        deque.push(push_value);
+    } else {
+        deque.shift();
+        deque.push(push_value);
+    }
+}
+
+function element_count(list, element){
+    let count = 0;
+    for(let i=0; i < list.length; i++){
+        if(list[i] === element){
+            count++;
+        }
+    }
+    return count;
+}
+
+
+
+// function dictionary_count(dict, )
 
 var model;
 var model1;
@@ -63,6 +86,10 @@ let actions_m1 = ['ㅁ','ㅂ','ㅍ','ㅇ','ㅇ','ㅎ','ㅏ','ㅐ','ㅑ','ㅒ','�
 let actions_m2 = ['ㅇ','ㅎ','ㅗ','ㅚ','ㅛ'];
 let actions_m3 = ['ㄱ','ㅈ','ㅊ','ㅋ','ㅅ','ㅜ','ㅟ'];
 let actions_m4 = ['ㅎ','ㅓ','ㅔ','ㅕ','ㅖ','ㄴ','ㄷ','ㄹ','ㅡ','ㅢ'];
+
+let this_action = '';
+let action_seq = [];
+
 async function loadModel(model_path){
     const handler = tfn.io.fileSystem(model_path);
     return await tf.loadLayersModel(handler);
@@ -106,6 +133,33 @@ app.on('ready', () => {
 
 var batch = new Array(285);
 var index = 0;
+
+// Keyborad Variables
+let cnt = 0;
+let jamo_li = [];
+let jamo_join_li = [];
+jamo_join_li.push(' ');
+
+let status_cnt_conf = 10;
+
+let M = ['ㅏ', 'ㅐ', 'ㅑ', 'ㅒ', 'ㅣ', 'ㅗ', 'ㅚ', 'ㅛ', 'ㅜ', 'ㅟ', 'ㅠ', 'ㅓ', 'ㅔ', 'ㅕ', 'ㅖ', 'ㅡ', 'ㅢ', 'ㅘ', 'ㅙ', 'ㅝ', 'ㅞ'];
+let J = ["ㄱ", "ㅅ", "ㅈ", "ㅊ", "ㅋ", "ㄴ", "ㄷ", "ㄹ", "ㅌ", "ㅁ", "ㅂ", "ㅍ", "ㅇ", "ㅎ", "ㄲ", "ㅆ", "ㅉ", "ㄸ", "ㅃ"];
+let JJ_dict = {
+    "ㄱ":"ㄲ",
+    "ㅅ":"ㅆ",
+    "ㅈ":"ㅉ",
+    "ㄷ":"ㄸ",
+    "ㅂ":"ㅃ"
+    };
+let siot = ['ㅅ', 'ㅆ'];
+let MM_lst = ['ㅗ', 'ㅜ'];
+let MM_dict = {
+    "ㅏ":"ㅘ",
+    "ㅐ":"ㅙ",
+    "ㅓ":"ㅝ",
+    "ㅔ":"ㅞ"
+    };
+
 // catch toMain (landmark infos)
 ipcMain.on('toMain', (e, item) => {
     let hand_lmlist = item[0];
@@ -113,10 +167,40 @@ ipcMain.on('toMain', (e, item) => {
     let hand_angle = calAngleForHand(hand_lmlist[0], hand_lmlist[9]);
     let action = '';
     let select_model = '';
+
     let thumb_index_angle = calAngleForHandLandmark(hand_lmlist[4], hand_lmlist[2], hand_lmlist[5]);
-    
     let wrist_angle = wrist_angle_calculator(hand_lmlist);
     let similar_text_res = similar_text_res_calculator(hand_lmlist);
+
+    
+
+    if (!(this_action in ['', ' '])){
+        cnt += 1;
+        deque_push(jamo_li, this_action, 10);
+
+        // this_action을 큐에 저장
+        // console.log(jamo_li);
+        
+
+        // status_li.push(status);
+
+        if (cnt >= status_cnt_conf){
+            let jamo_dict = {};
+            for (jamo of jamo_li) {
+                jamo_dict[jamo] = element_count(jamo_li, jamo)
+            }
+            let jamo_dict_sorted = [];
+            for (jamo in jamo_dict){
+                jamo_dict_sorted.unshift([jamo, jamo_dict[jamo]]);
+            }
+            jamo_dict_sorted.sort(function(a,b){
+                return b[1] - a[1];
+            })
+            console.log(jamo_dict_sorted);
+        }
+
+    }
+
 
     for(let i=0 ; i<57 ; i++) {  // 21 landmarks fixed (just in case some are hidden)
         batch[index++] = d[i];
@@ -180,8 +264,28 @@ ipcMain.on('toMain', (e, item) => {
         
     }
     
-    if (action != '') {console.log(action);}
+    // action(1개의 시퀀스로 예측한 지화) 출력
+    // if (action != '') {console.log(action);}
+
+    if (action_seq.length < 3) {
+        action_seq.push(action);
+    } else {
+        action_seq.shift();
+        action_seq.push(action);
+    }
     
+    // action_seq(예측한 지화를 최대 3개까지 저장 deque) 출력
+    // console.log(action_seq);
+
+    if (action_seq.length == 3){
+        if (action_seq[0] == action_seq[1] && action_seq[1] == action_seq[2]){
+            this_action = action;
+            // this_action(action_seq 모든 요소가 동일할 때, 연속 3개가 동일하게 예측될 경우) 출력
+            // console.log(this_action);
+        }
+    }
+    
+
     // const preds = check_moving_model.predict(input).argMax(-1);
     // preds.array().then(array => console.log(check_moving_action[array[0]]));
 
